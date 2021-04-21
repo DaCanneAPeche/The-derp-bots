@@ -1,292 +1,122 @@
 import discord
-from discord.ext import commands
-from tic_tac_toe import TicTacToe
-
-derp_emoji = '<:derp:822190112460767252>'
-master_mention = '<@!704779822890745986>'
-bot_id = '822586810152255530'
-bot = commands.Bot(command_prefix=derp_emoji + ' ')
-all_morpions = []
-
-bot.remove_command('help')
+from weird_bot import DiscordBot  # bot class
+import requests
+import json
+from random import randint
 
 
-@bot.event
-async def on_ready():
-    print('bot connecté')
-    await bot.change_presence(status=None, activity=discord.Game('tuer des Kappas'))
+# define constants
+def define_constants():
+    # return constants
+    constants = {
+        "not_allowed_words": ['blonde', 'arabe', 'juif', 'obèse'],  # "no_worlds" : not allowed worlds in jokes
+        "derp emoji": '<:derp:822190112460767252>',
+        'derp emojis': ['<:wow_derp:825451424107200573>', '<:wizard_derp:825425434044661830>',
+                        '<:white_derp:825404599322017832>',
+                        '<:termina_derp:825437326637400155>', '<:storm_hungry_derp:825404624579592213>',
+                        '<:star_derp:825373824966721536>', '<:sad_derp:825419665110597643>',
+                        '<:red_derp:823152144257515550>',
+                        '<:old_derp:825430217404186665>', '<:love_derp:825380379514110033>',
+                        '<:laughing_derp:826871192262541369>', '<:killer_derp:825423560553660437> ',
+                        '<:ink_derp:826081060210344028>', '<:idiot_derp:825426870824337479> ',
+                        '<:hungy_derp:825404566853648405>', '<:hungry_black_derp:825374191837904917> ',
+                        '<:hugly_happy_derp:825419213661012019>', '<:happy_derp:825425791969132644> ',
+                        '<:derp_gene:826117378411724810>', '<:derp:822190112460767252>',
+                        '<:criing_derp:825419483899887646> ',
+                        '<:chocked_derp:825419136925564948>', '<:bully_derp:825439375335751781>',
+                        '<:brain_derp:825428421844140042>', '<:boring_derp:825419407668150272>',
+                        '<:blue_derp:823152491948539904>', '<:black_derp:825370095865692242>'],
+        "bot id": 834171699297386546
+    }
+
+    return constants
 
 
-@bot.event
-async def on_reaction_add(reaction, user):
-    for morpion in all_morpions:
+# get token, need file name
+def get_token(key, file='tokens.json'):
+    # open the file and read the token
+    with open(file) as f:
+        data = json.load(f)
 
-        if reaction.message.id == morpion.msg[0].id:
-
-            if str(user.id) in str(morpion.player2.id) and morpion.msg[1] == 'start':
-
-                print('okay', reaction)
-
-                if reaction.emoji == '❎':
-                    await morpion.finish(all_morpions)
-                    print('finish')
-
-                if reaction.emoji == '✅':
-                    await morpion.next(all_morpions)
-
-            elif morpion.msg[1] == 'start' and str(user.id) not in bot_id:
-
-                await reaction.remove(user)
-
-            if morpion.msg[1] == 'turning':
-
-                possible_reactions = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣']
-                if reaction.emoji in possible_reactions:
-
-                    print('is in')
-
-                    if morpion.player_O and str(morpion.player1.id) in str(user.id) or \
-                            not morpion.player_O and str(morpion.player2.id) in str(user.id):
-
-                        print('can_play')
-
-                        morpion.player_O = not morpion.player_O
-
-                        emoji_number = possible_reactions.index(reaction.emoji)
-                        board_number = (emoji_number // 3, emoji_number % 3)
-                        print(emoji_number - emoji_number // 3)
-
-                        print(board_number)
-
-                        if morpion.player_O:
-
-                            morpion.board[board_number[0]][board_number[1]] = morpion.cross
-
-                        elif not morpion.player_O:
-
-                            morpion.board[board_number[0]][board_number[1]] = morpion.circle
-
-                        await morpion.next(all_morpions)
-
-                    elif bot_id not in str(user.id):
-
-                        return await reaction.remove(user)
-
-                else:
-
-                    print('turning : ', reaction.emoji)
-
-                    if reaction is not None:
-                        await reaction.remove(user)
+    return data[key]  # return the token
 
 
-@bot.command()
-async def help(ctx, cmd):
-    if cmd == 'derp':
-        await ctx.send(f"ça, c'est un secret {derp_emoji}")
-    elif cmd == 'help':
-        await ctx.send(f'vraiment {derp_emoji} ?')
-    elif cmd == 'mute':
-        await ctx.send('empêche la parole')
-    elif cmd == 'unmute':
-        await ctx.send('redonne la parole')
-    elif cmd == 'ban':
-        await ctx.send("empêche de revenir sur le serv")
-    elif cmd == 'unban':
-        await ctx.send('permet de revenir sur le serv')
-    elif cmd == 'kill':
-        await ctx.send('Demande de mort')
-    elif cmd == derp_emoji:
-        await ctx.send('chante le sainte prière')
-    elif cmd == master_mention:
-        await ctx.send('Fais le ! Fais le !')
-    elif cmd == 'tictactoe' or cmd == 'morpion':
-        await ctx.send('Pour jouer au `morpion` / `tic tac toe` !')
-    elif cmd == 'stop_tictactoe' or cmd == 'stop_morpion':
-        await ctx.send('annulle un `morpion` / `tic tac toe` !')
+# joke : get a random joke from an api, need api url and the not allowed worlds
+async def send_a_joke(args_list__url_not_allowed_words, message):
+    url = args_list__url_not_allowed_words[0]
+    not_allowed_words = args_list__url_not_allowed_words[1]
+
+    data = requests.get(url,
+                        headers={'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNzE4N'
+                                                  'zQzMjM5MTI1MTA2NzI4IiwibGltaXQiOjEwMCwia2V5IjoiVEh6S1IyQUFRZlpGV2'
+                                                  'ZCWXZYOTFHWGRGSnVCMGtwSktiTHBoSlo3TmJzb0xBMVJwT0YiLCJjcmVhdGVkX2F'
+                                                  '0IjoiMjAyMS0wMy0yMVQxNTowNDoxOCswMDowMCIsImlhdCI6MTYxNjMzOTA1OH0.'
+                                                  '0Tbo7AcZniPDHHt3tI9ynIDUbWAY7HH7XSn_p4dJGM8'})
+    joke = json.loads(data.text)
+    ok = True
+
+    for element in joke:
+
+        for word in not_allowed_words:
+
+            if word in str(joke[element]):
+                ok = False
+
+    if ok:
+
+        embed = discord.Embed(
+            title=joke["joke"],
+            description=f'||*{joke["answer"]}* ||',
+            colour=discord.Color.random()
+        )
+
+        await message.channel.send(embed=embed)
+
     else:
-        await ctx.send("pas compris, faîtes `!help` pour voir la liste des commandes")
+
+        await send_a_joke(args_list__url_not_allowed_words, message)
 
 
-@help.error
-async def on_command_error(ctx, error):
-    # detecter cette erreur
-    if isinstance(error, commands.MissingRequiredArgument):
-        # envoyer un message
-        await ctx.send(
-            f"Préfix : `:derp:`\nVoici la liste des commandes (pour une information sur une commande précise, faire `!help [commande]`) :")
-        await ctx.send(
-            f"```help | help [commande]\nderp\nkill [@pseudo]:derp:\n{master_mention}\n"
-            f"tictactoe [@pseudo] | morpion [@pseudo]\nstop_morpion | stop_tictactoe"
-            f"\nmute [@pseudo] (createur seulement)\nunmute  [@pseudo] (createur seulement)\n"
-            f"ban [@pseudo] [raison](createur seulement)\nunban [nom + #] (createur seulement)\n```")
+async def send_a_derp(args_list__emojis_botid, message):
+    if not message.author.id == args_list__emojis_botid[1]:
+        await message.channel.send(args_list__emojis_botid[0][randint(0, len(args_list__emojis_botid[0]) - 1)])
 
 
-@bot.command()
-@commands.has_role('Createur')
-async def mute(ctx, member: discord.Member):
-    for role in ctx.guild.roles:
-        if role.name == 'mute':
-            await member.add_roles(role)
-            print(role.id)
-        elif role.name == 'membre':
-            await member.remove_roles(role)
-
-    await ctx.send(f'Gg a {member.mention} qui est mute {derp_emoji} !')
+# set the key words, key messages, and command
+def set_worlds_messages_commands(bot, constants):
+    # set key words in a dict : {'variable name' : (function, [arg one, arg two, etc])}
+    bot.set_world_in_messages({
+        # 'blague' call joke([url, not allowed words])
+        'blagu': (send_a_joke, ['https://www.blagues-api.fr/api/random', constants['not_allowed_words']]),
+        constants['derp emoji']: (send_a_derp, [constants['derp emojis'], constants['bot id']])
+    })
 
 
-@bot.command()
-@commands.has_role('Createur')
-async def unmute(ctx, member: discord.Member):
-    for role in ctx.guild.roles:
-        if role.name == 'mute':
-            await member.remove_roles(role)
-        elif role.name == 'membre':
-            await member.add_roles(role)
-
-    await ctx.send(f'Eh mer... mince ! {member.mention} peut parler {derp_emoji} !')
+# set what append o the 'on ready' event, need bot
+def is_ready(bot):
+    @bot.event  # it's an event of the bot
+    async def on_ready():
+        # print in console : [name of the bot] ready
+        print(f'{bot.user.display_name} ready')
+        await bot.change_presence(activity=discord.Game('être bizare'))  # change status of the bot
 
 
-@bot.command()
-async def derp(ctx):
-    await ctx.send(f'Hé {ctx.author.mention}...\n||{derp_emoji}||')
-    for role in ctx.guild.roles:
-        if role.name == 'membre':
-            await ctx.author.add_roles(role)
+# main function
+def main():
+    bot = DiscordBot()  # define bot
+
+    is_ready(bot)  # call is ready
+
+    constants = define_constants()  # define constants
+
+    set_worlds_messages_commands(bot, constants)  # set key worlds, etc
+
+    bot.update()  # update the bot
+
+    print('starting bot...')  # just a print for say 'the script has starting'
+
+    bot.run(get_token('weird_bot'))  # run the bot with the token
 
 
-@bot.command()
-async def kill(ctx, member: discord.Member):
-    if not member.mention == master_mention and not ctx.author.mention == member.mention and not member.mention == "<@822586810152255530>":
-        await ctx.send(f'Mettez {member.mention} au bûcher ! Goooooo ! Alezzzz !')
-    elif ctx.author.mention == member.mention:
-        await ctx.send("Le suicide c'est cracra")
-    elif member.mention == "<@822586810152255530>":
-        await ctx.send(f"mhhhhhhhhh... {derp_emoji}")
-    else:
-        await ctx.send(
-            f'Comment ose-tu demander le mort du créateur ! Sachez que {ctx.author.mention} est un sale traître ! Grrrrrrrr !')
-        for role in ctx.guild.roles:
-            if role.name == 'mute':
-                await ctx.author.add_roles(role)
-                print(role.id)
-            elif role.name == 'membre':
-                await ctx.author.remove_roles(role)
-
-        await ctx.send(f'Gg a {ctx.author.mention} qui est mute {derp_emoji} !')
-
-
-@bot.command()
-@commands.has_role('Createur')
-async def ban(ctx, member: discord.Member, reason=None):
-    await member.ban(reason=reason)
-    await ctx.send(f'et un ban pour {member.mention.dispay_name}, un !')
-
-
-@bot.command()
-@commands.has_role('Createur')
-async def unban(ctx, *, member):
-    banned_users = await ctx.guild.bans()
-
-    member_name, member_discriminator = member.split('#')
-    for ban_entry in banned_users:
-        user = ban_entry.user
-
-        if (user.name, user.discriminator) == (member_name, member_discriminator):
-            await ctx.guild.unban(user)
-            await ctx.channel.send(f"{user.mention} est (mal)heureusement déban !")
-
-
-@bot.command(name=derp_emoji)
-async def aderp(ctx):
-    await ctx.send(
-        f'derplouya mes derps ! Il seee réééévoltaa pouuuuuur deveeeeniiiir maiiiiitre de luiiii mêêêêêêêêêêêêêême... et'
-        f' d\'une rééévoooluuutioon, leee deviiint, grâââce au saint {master_mention} !\nAdeerp !')
-
-
-@bot.command(name=master_mention)
-async def I_love_my_master(ctx):
-    await ctx.send(f'{master_mention} le bg ! ouaaaaais !')
-
-
-@bot.command(name='<@704779822890745986>')
-async def I_love_my_master_two(ctx):
-    await ctx.send(f'{master_mention} le bg ! ouaaaaais !')
-
-
-@bot.command(name='tictactoe')
-async def tic_tac_toe(ctx, member: discord.Member):
-
-    print('tic tac toe')
-
-    is_in_morpion = False
-
-    for morpion in all_morpions:
-
-        if ctx.author == morpion.player1 or ctx.author == morpion.player2 or \
-                member == morpion.player1 or member == morpion.player2:
-
-            if ctx.author == morpion.player1 or ctx.author == morpion.player2:
-                await ctx.author.send('Désolé, mais tu est déjà en train de jouer au `morpion` / `tic tac toe`! '
-                                      'Pour annuler la partie en cours, '
-                                      'fait `:derp: stop_morpion` ou `:derp: stop_tictactoe`')
-
-            else:
-                await member.send('Désolé, mais ton adversaire est déjà en train de jouer au `morpion` / '
-                                  '`tic tac toe`!')
-
-            is_in_morpion = True
-
-    if not is_in_morpion:
-
-        if not ctx.author == member:
-
-            morpion = TicTacToe(ctx.author, member, ctx, bot)
-            await morpion.start()
-
-            all_morpions.append(morpion)
-
-        else:
-
-            await ctx.message.delete()
-            await ctx.author.send(
-                't\'as tellement pas d\'amis que tu veux jouer tout seul au `tic tac toe` / `morpion` ?',
-                file=discord.File('sad.jpg'))
-
-
-@bot.command()
-async def morpion(ctx, member: discord.Member):
-    await tic_tac_toe(ctx, member)
-
-@bot.command()
-async def stop_tictactoe(ctx):
-
-    for morpion in all_morpions:
-
-        if ctx.author == morpion.player1 or ctx.author == morpion.player2:
-
-            morpion.winner = None
-
-            await morpion.finish(all_morpions)
-
-
-@bot.command()
-async def stop_morpion(ctx):
-
-    await stop_tictactoe(ctx)
-
-
-@ban.error
-@unban.error
-@mute.error
-@unmute.error
-async def on_command_error(ctx, error):
-    if isinstance(error, commands.MissingRole):
-        await ctx.send(f'Non mais {ctx.author.mention} {derp_emoji} !')
-
-
-token = "TOKEN"
-
-print("Lancement du bot...")
-
-bot.run(token)
+if __name__ == '__main__':
+    main()  # call main function

@@ -161,12 +161,12 @@ class TicTacToe:
 
             embed.title = f'Le joueur O ({self.player1.display_name}) gagne !'
             embed.colour = discord.Color.red()
-            await self.player1.send('Bravo à toi !')
-            await self.player2.send('Tu feras mieux la prochaine fois !')
+            await self.player1.send('Bravo à toi !', file=discord.File('win.jpg'))
+            await self.player2.send('Tu feras mieux la prochaine fois !', file=discord.File('losing.jpg'))
 
         else:
-            await self.player1.send('Tu feras mieux la prochaine fois !')
-            await self.player2.send('Bravo à toi !')
+            await self.player1.send('Tu feras mieux la prochaine fois !', file=discord.File('losing.jpg'))
+            await self.player2.send('Bravo à toi !', file=discord.File('win.jpg'))
 
         await self.ctx.send(embed=embed)
 
